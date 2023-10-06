@@ -14,6 +14,7 @@ def get_ext(files: list, exts=['.mp3', '.wma']) -> str:
 class FileList():
     def __init__(self, base_name: str, ext_list=['.mp3', '.wma']):
         self.base_name = base_name
+        self.drive_name = os.path.splitdrive(base_name)[0]
         self.ext_list = [s.lower() for s in ext_list]
 
     def get_list(self) -> list:
@@ -23,18 +24,27 @@ class FileList():
             and the extension of the first file in the directory
             """
         out_list = []
+        src_parentCount = 0
+        src_parentX = -1
         for base_name, subdirList, fileList in os.walk(self.base_name):
             dirName = os.path.normcase(base_name)
             # print('Found directory: %s' % base_name)
-            splitName = dirName.split('\\')
+            drive_path = os.path.splitdrive(dirName)[1]
+            splitName = drive_path.split('\\')
             if len(splitName) == 2 and len(splitName[1]) > 0 and len(subdirList) > 0:
+                # check if the artist had any albums that can be copied
+                if src_parentCount == 0 and src_parentX > -1:
+                    del out_list[src_parentX]
                 src_parent = splitName[1]
                 out_list.append((dirName[3:], splitName[1], '', len(subdirList), 'dir'))
+                src_parentX = len(out_list) - 1
+                src_parentCount = 0
             if len(splitName) == 3 and len(splitName[2]) > 0 and len(fileList) > 1:
                 test_file = fileList[1]
                 file_ext = test_file[-4:]
                 if file_ext.lower() in self.ext_list:
                     out_list.append((dirName[3:], src_parent, splitName[2], len(fileList), file_ext))
+                    src_parentCount = src_parentCount + 1
         return (sorted(out_list, key=lambda x: x[0]))
 
 
@@ -72,14 +82,22 @@ def mergeLists(src_flist: list, usb_flist: list) -> list:
 
 
 import wmi
-
-
 def drive_label(drive: str) -> str:
     c = wmi.WMI()
     for d in c.Win32_LogicalDisk():
         if d.Caption[0].strip().lower() == drive[0].strip().lower():
             return (str(d.VolumeName).strip())
 
+
+import shutil
+
+
+# copy the directory tree from the source to the USB drive
+def copyfiles(src: str, dst: str):
+    try:
+        shutil.copytree(src, dst)
+    except OSError as e:
+        print('Directory not copied. Error: %s' % e)
 
 if __name__ == '__main__':
     '''
@@ -88,15 +106,18 @@ if __name__ == '__main__':
     inDir = input("Enter the drive:/path/ to be listed.")
     print(drive_label(inDir[0]))
     f_list = FileList(inDir)
+    print(f"Drive: {f_list.drive_name}")
     file_list = f_list.get_list()
     for f in file_list:
         print(f)
 
     src_dir = input("Enter the source path to be included.")
     src_fl = FileList(src_dir)
+    print(f"Source Drive: {src_fl.drive_name}")
     src_flist = src_fl.get_list()
     usb_dir = input("Enter the USB drive.")
     usb_fl = FileList(usb_dir)
+    print(f"USB Drive: {usb_fl.drive_name}")
     usb_flist = usb_fl.get_list()
     mrgdList = mergeLists(src_flist, usb_flist)
     for e in mrgdList:

@@ -70,6 +70,7 @@ tkroot.columnconfigure(0, weight=1)
 src_dir = filedialog.askdirectory(title='Select source directory.',
                                   initialdir='MyComputer', parent=tkroot)
 src_fl = fl.FileList(src_dir)
+# tk.messagebox.showinfo(title='Loading Source Drive information', message=f"Source Drive: {src_fl.drive_name}")
 src_flist = src_fl.get_list()
 # Fetch the USB drive files
 usb_dir = filedialog.askdirectory(title='Select USB Destination.',
@@ -77,22 +78,23 @@ usb_dir = filedialog.askdirectory(title='Select USB Destination.',
 usb_fl = fl.FileList(src_dir)
 usb_flist = usb_fl.get_list()
 # merge the two lists and set up the id to be used in the two trees
-
+mrgd_flist = fl.mergeLists(src_flist, usb_flist)
+# Create the source tree
 src_tree_frame = ScrolledFrame(tkroot, width=SRCTREE_WIDTH, height=SRCTREE_HEIGHT)
 src_tree_frame.bind_arrow_keys(tkroot)
 src_tree_frame.bind_scroll_wheel(tkroot)
-nlFrame = src_tree_frame.display_widget(tk.Frame, relief='raised', bd=2, pady=5, background='light blue')
-src_tree_frame.pack(anchor=tk.NE, fill=tk.X, expand=1)
+src_tree_frame.grid()
 src_tree = ttk.Treeview(src_tree_frame)
-src_tree.heading('#0', text=src_dir, anchor=tk.W)
+src_tree.heading('#0', text=src_dir)
 
 # Set the directory you want to start from
 rootDir = src_dir
-for f in src_flist:
-    if f[2] == '':
-        src_parent = src_tree.insert('', tk.END, f[1], text=f[1], open=True)
+for f in mrgd_flist:
+    if f[2][2] == '':
+        src_parent = src_tree.insert('', tk.END, iid=str(f[0]), text=f[2][1], open=True)
     else:
-        src_tree.insert(src_parent, tk.END, text=f[2], open=False)
+        src_tree.insert(src_parent, tk.END, iid=str(f[0]), text=f[2][2], open=False)
 
 src_tree.grid(row=0, column=0, sticky=tk.NSEW)
+
 tkroot.mainloop()
